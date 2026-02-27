@@ -50,7 +50,7 @@
   "Fetch review info for SLUG via gh pr list.
 Return a hash-table keyed by PR number."
   (unless (executable-find "gh")
-    (user-error "gh CLI is not installed"))
+    (user-error "Gh CLI is not installed"))
   (let* ((stderr-file (make-temp-file "forge-review-overlay-"))
          (json
           (unwind-protect
@@ -63,7 +63,7 @@ Return a hash-table keyed by PR number."
                           "--state" "open"
                           "--limit" "100"
                           "--json" "number,reviewDecision,latestReviews,statusCheckRollup"))
-                  (user-error "gh pr list --repo %s failed: %s"
+                  (user-error "Gh pr list --repo %s failed: %s"
                               slug
                               (string-trim
                                (with-temp-buffer
@@ -91,11 +91,11 @@ When FORCE is non-nil, bypass cache."
 ;;;; Formatting
 
 (defun forge-review-overlay--format-decision (decision)
-  "Format DECISION as a propertized string, or nil if empty."
+  "Format DECISION as an icon string, or nil if empty."
   (pcase decision
-    ("APPROVED"          (propertize "APPROVED" 'face 'success))
-    ("CHANGES_REQUESTED" (propertize "CHANGES"  'face 'error))
-    ("REVIEW_REQUIRED"   (propertize "REVIEW"   'face 'warning))
+    ("APPROVED"          "✅")
+    ("CHANGES_REQUESTED" "❌")
+    ("REVIEW_REQUIRED"   "👀")
     (_ nil)))
 
 (defun forge-review-overlay--format-ci (rollup)
@@ -113,6 +113,16 @@ When FORCE is non-nil, bypass cache."
                          ((> pending 0) 'warning)
                          (t 'success))))))
 
+(defun forge-review-overlay--format-review-state (state)
+  "Format review STATE as an icon string."
+  (pcase state
+    ("APPROVED"          "✅")
+    ("CHANGES_REQUESTED" "❌")
+    ("COMMENTED"         "💬")
+    ("DISMISSED"         "🚫")
+    ("PENDING"           "⏳")
+    (_                   "?")))
+
 (defun forge-review-overlay--format-reviewers (reviews)
   "Format REVIEWS as reviewer list, or nil if empty."
   (when (and reviews (sequencep reviews) (> (length reviews) 0))
@@ -120,25 +130,30 @@ When FORCE is non-nil, bypass cache."
       (seq-doseq (r reviews)
         (let* ((login (alist-get 'login (alist-get 'author r)))
                (state (or (alist-get 'state r) ""))
-               (icon (pcase state
-                       ("APPROVED"          "✓")
-                       ("CHANGES_REQUESTED" "✗")
-                       ("COMMENTED"         "💬")
-                       (_                   "?"))))
+               (icon (forge-review-overlay--format-review-state state)))
           (unless (member login forge-review-overlay-ignored-reviewers)
             (push (format "%s:%s" login icon) parts))))
       (string-join (nreverse parts) " "))))
+
+(defun forge-review-overlay--format-status (pr-data)
+  "Format review status from PR-DATA as icon(reviewers), or nil if no data."
+  (let ((decision (forge-review-overlay--format-decision
+                   (alist-get 'reviewDecision pr-data)))
+        (reviewers (forge-review-overlay--format-reviewers
+                    (alist-get 'latestReviews pr-data))))
+    (cond
+     ((and decision reviewers) (format "%s(%s)" decision reviewers))
+     (decision                 decision)
+     (reviewers                reviewers)
+     (t                        nil))))
 
 (defun forge-review-overlay--format (pr-data)
   "Build overlay string from PR-DATA (alist)."
   (let ((parts (delq nil
                      (list
-                      (forge-review-overlay--format-decision
-                       (alist-get 'reviewDecision pr-data))
+                      (forge-review-overlay--format-status pr-data)
                       (forge-review-overlay--format-ci
-                       (alist-get 'statusCheckRollup pr-data))
-                      (forge-review-overlay--format-reviewers
-                       (alist-get 'latestReviews pr-data))))))
+                       (alist-get 'statusCheckRollup pr-data))))))
     (when parts
       (concat " " (string-join parts " ")))))
 
