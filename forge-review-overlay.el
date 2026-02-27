@@ -49,20 +49,31 @@
 (defun forge-review-overlay--fetch (slug)
   "Fetch review info for SLUG via gh pr list.
 Return a hash-table keyed by PR number."
-  (let ((json (with-temp-buffer
+  (unless (executable-find "gh")
+    (user-error "gh CLI is not installed"))
+  (let* ((stderr-file (make-temp-file "forge-review-overlay-"))
+         (json
+          (unwind-protect
+              (with-temp-buffer
                 (unless (zerop
                          (call-process
-                          "gh" nil t nil
+                          "gh" nil (list t stderr-file) nil
                           "pr" "list"
                           "--repo" slug
                           "--state" "open"
                           "--limit" "100"
                           "--json" "number,reviewDecision,latestReviews,statusCheckRollup"))
-                  (user-error "Gh pr list --repo %s failed" slug))
+                  (user-error "gh pr list --repo %s failed: %s"
+                              slug
+                              (string-trim
+                               (with-temp-buffer
+                                 (insert-file-contents stderr-file)
+                                 (buffer-string)))))
                 (goto-char (point-min))
                 (json-parse-buffer :array-type 'list
-                                   :object-type 'alist)))
-        (table (make-hash-table :test 'eql)))
+                                   :object-type 'alist))
+            (delete-file stderr-file)))
+         (table (make-hash-table :test 'eql)))
     (dolist (pr json)
       (puthash (alist-get 'number pr) pr table))
     table))
@@ -165,6 +176,15 @@ With prefix arg FORCE, re-fetch from gh."
   (interactive "P")
   (unless (derived-mode-p 'magit-mode)
     (user-error "Not in a magit buffer"))
+  (if (called-interactively-p 'any)
+      (forge-review-overlay--show-1 force)
+    (condition-case err
+        (forge-review-overlay--show-1 force)
+      (user-error (message "forge-review-overlay: %s" (cadr err))))))
+
+(defun forge-review-overlay--show-1 (force)
+  "Internal: fetch and apply review overlays.
+When FORCE is non-nil, bypass cache."
   (let* ((repo (or (forge-get-repository :tracked?)
                    (user-error "No tracked forge repository")))
          (slug (format "%s/%s" (oref repo owner) (oref repo name)))
