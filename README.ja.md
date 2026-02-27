@@ -37,6 +37,14 @@ forge の PR セクションに、レビュー状況（reviewDecision、CI ス�
 
 ## 使い方
 
+### hook で自動有効化
+
+```elisp
+(add-hook 'magit-status-mode-hook #'forge-review-overlay-mode)
+```
+
+### 手動コマンド
+
 ```elisp
 ;; magit 更新時に自動でオーバーレイを更新
 M-x forge-review-overlay-mode

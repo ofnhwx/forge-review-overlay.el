@@ -37,6 +37,14 @@ Emacs package that displays review status (reviewDecision, CI status, reviewer i
 
 ## Usage
 
+### Enable automatically via hook
+
+```elisp
+(add-hook 'magit-status-mode-hook #'forge-review-overlay-mode)
+```
+
+### Manual commands
+
 ```elisp
 ;; Toggle auto-refresh on magit refresh
 M-x forge-review-overlay-mode
