@@ -104,7 +104,7 @@ When FORCE is non-nil, bypass cache."
   (pcase decision
     ("APPROVED"          "✅")
     ("CHANGES_REQUESTED" "❌")
-    ("REVIEW_REQUIRED"   "👀")
+    ("REVIEW_REQUIRED"   "⏳")
     (_ nil)))
 
 (defun forge-review-overlay--format-ci (rollup)
