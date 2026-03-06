@@ -142,7 +142,8 @@ When FORCE is non-nil, bypass cache."
                (icon (forge-review-overlay--format-review-state state)))
           (unless (member login forge-review-overlay-ignored-reviewers)
             (push (format "%s:%s" login icon) parts))))
-      (string-join (nreverse parts) " "))))
+      (when parts
+        (string-join (nreverse parts) " ")))))
 
 (defun forge-review-overlay--format-status (pr-data)
   "Format review status from PR-DATA as icon(reviewers), or nil if no data."
