@@ -130,7 +130,7 @@ When FORCE is non-nil, bypass cache."
     ("COMMENTED"         "💬")
     ("DISMISSED"         "🚫")
     ("PENDING"           "⏳")
-    (_                   "?")))
+    (_                   "❓")))
 
 (defun forge-review-overlay--format-reviewers (reviews)
   "Format REVIEWS as reviewer list, or nil if empty."
