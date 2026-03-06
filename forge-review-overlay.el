@@ -22,6 +22,11 @@
   :type '(repeat string)
   :group 'forge)
 
+(defcustom forge-review-overlay-cache-ttl 3600
+  "Cache time-to-live in seconds."
+  :type 'integer
+  :group 'forge)
+
 ;;;; Cache
 
 ;; key: "owner/name"
@@ -29,9 +34,13 @@
 (defvar forge-review-overlay--cache (make-hash-table :test 'equal))
 
 (defun forge-review-overlay--cache-valid-p (slug repo-updated)
-  "Return non-nil if cache for SLUG was fetched at or after REPO-UPDATED."
-  (when-let* ((entry (gethash slug forge-review-overlay--cache)))
-    (not (string< (car entry) repo-updated))))
+  "Return non-nil if cache for SLUG was fetched at or after REPO-UPDATED and within TTL."
+  (when-let* ((entry (gethash slug forge-review-overlay--cache))
+              (fetched (car entry)))
+    (and (or (null repo-updated)
+             (not (string< fetched repo-updated)))
+         (< (float-time (time-subtract nil (encode-time (iso8601-parse fetched))))
+            forge-review-overlay-cache-ttl))))
 
 (defun forge-review-overlay--cache-get (slug)
   "Return cached data (hash-table) for SLUG."
@@ -214,9 +223,7 @@ When enabled, overlays are refreshed via
 `magit-refresh-buffer-hook'."
   :lighter " FRO"
   (if forge-review-overlay-mode
-      (progn
-        (add-hook 'magit-refresh-buffer-hook #'forge-review-overlay-show nil t)
-        (forge-review-overlay-show))
+      (add-hook 'magit-refresh-buffer-hook #'forge-review-overlay-show nil t)
     (remove-hook 'magit-refresh-buffer-hook #'forge-review-overlay-show t)
     (forge-review-overlay-clear)))
 
