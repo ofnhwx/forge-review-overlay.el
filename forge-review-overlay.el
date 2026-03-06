@@ -154,7 +154,7 @@ When FORCE is non-nil, bypass cache."
     (cond
      ((and decision reviewers) (format "%s(%s)" decision reviewers))
      (decision                 decision)
-     (reviewers                reviewers)
+     (reviewers                (format "(%s)" reviewers))
      (t                        nil))))
 
 (defun forge-review-overlay--format (pr-data)
