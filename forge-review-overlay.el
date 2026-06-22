@@ -33,12 +33,12 @@
 ;; value: (updated-timestamp . hash-table<number, alist>)
 (defvar forge-review-overlay--cache (make-hash-table :test 'equal))
 
-(defun forge-review-overlay--cache-valid-p (slug repo-updated)
-  "Return non-nil if cache for SLUG was fetched at or after REPO-UPDATED and within TTL."
+(defun forge-review-overlay--cache-valid-p (slug pullreqs-until)
+  "Return non-nil if cache for SLUG was fetched at or after PULLREQS-UNTIL and within TTL."
   (when-let* ((entry (gethash slug forge-review-overlay--cache))
               (fetched (car entry)))
-    (and (or (null repo-updated)
-             (not (string< fetched repo-updated)))
+    (and (or (null pullreqs-until)
+             (not (string< fetched pullreqs-until)))
          (< (float-time (time-subtract nil (encode-time (iso8601-parse fetched))))
             forge-review-overlay-cache-ttl))))
 
@@ -87,11 +87,11 @@ Return a hash-table keyed by PR number."
       (puthash (alist-get 'number pr) pr table))
     table))
 
-(defun forge-review-overlay--get-data (slug repo-updated &optional force)
-  "Return data for SLUG at REPO-UPDATED, fetching via gh if needed.
+(defun forge-review-overlay--get-data (slug pullreqs-until &optional force)
+  "Return data for SLUG at PULLREQS-UNTIL, fetching via gh if needed.
 When FORCE is non-nil, bypass cache."
   (if (and (not force)
-           (forge-review-overlay--cache-valid-p slug repo-updated))
+           (forge-review-overlay--cache-valid-p slug pullreqs-until))
       (forge-review-overlay--cache-get slug)
     (let ((data (forge-review-overlay--fetch slug)))
       (forge-review-overlay--cache-set slug data)
@@ -213,8 +213,8 @@ When FORCE is non-nil, bypass cache."
   (let* ((repo (or (forge-get-repository :tracked?)
                    (user-error "No tracked forge repository")))
          (slug (format "%s/%s" (oref repo owner) (oref repo name)))
-         (repo-updated (oref repo updated))
-         (data (forge-review-overlay--get-data slug repo-updated force)))
+         (pullreqs-until (oref repo pullreqs-until))
+         (data (forge-review-overlay--get-data slug pullreqs-until force)))
     (forge-review-overlay--apply data)))
 
 ;;;###autoload
