@@ -27,6 +27,16 @@
   :type 'integer
   :group 'forge)
 
+(defcustom forge-review-overlay-highlighted-reviewer nil
+  "Reviewer login to highlight with `forge-review-overlay-highlight'."
+  :type '(choice (const :tag "None" nil) string)
+  :group 'forge)
+
+(defface forge-review-overlay-highlight
+  '((t :foreground "medium purple"))
+  "Face used for the login in `forge-review-overlay-highlighted-reviewer'."
+  :group 'forge)
+
 ;;;; Cache
 
 ;; key: "owner/name"
@@ -141,6 +151,9 @@ When FORCE is non-nil, bypass cache."
                (state (or (alist-get 'state r) ""))
                (icon (forge-review-overlay--format-review-state state)))
           (unless (member login forge-review-overlay-ignored-reviewers)
+            (when (and forge-review-overlay-highlighted-reviewer
+                       (equal login forge-review-overlay-highlighted-reviewer))
+              (setq login (propertize login 'face 'forge-review-overlay-highlight)))
             (push (format "%s:%s" login icon) parts))))
       (when parts
         (string-join (nreverse parts) " ")))))
