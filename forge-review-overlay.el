@@ -96,7 +96,7 @@ Return a hash-table keyed by PR number."
                           "--repo" slug
                           "--state" "open"
                           "--limit" "100"
-                          "--json" "number,reviewDecision,latestReviews,statusCheckRollup"))
+                          "--json" "number,reviewDecision,reviews,statusCheckRollup"))
                   (user-error "Gh pr list --repo %s failed: %s"
                               slug
                               (string-trim
@@ -157,11 +157,35 @@ When FORCE is non-nil, bypass cache."
     ("PENDING"           "⏳")
     (_                   "❓")))
 
+(defun forge-review-overlay--latest-reviews-per-user (reviews)
+  "Return latest review per user from REVIEWS (chronological list).
+Order follows each user's first appearance."
+  (let ((table (make-hash-table :test 'equal))
+        (order nil))
+    (seq-doseq (r reviews)
+      (when-let* ((login (alist-get 'login (alist-get 'author r))))
+        (unless (gethash login table)
+          (push login order))
+        (puthash login r table)))
+    (mapcar (lambda (login) (gethash login table)) (nreverse order))))
+
+(defun forge-review-overlay--sort-reviews (reviews)
+  "Return REVIEWS with the highlighted reviewer moved to the front."
+  (if-let* ((highlight forge-review-overlay-highlighted-reviewer)
+            (match (seq-find
+                    (lambda (r)
+                      (equal (alist-get 'login (alist-get 'author r))
+                             highlight))
+                    reviews)))
+      (cons match (remq match reviews))
+    reviews))
+
 (defun forge-review-overlay--format-reviewers (reviews)
   "Format REVIEWS as reviewer list, or nil if empty."
   (when (and reviews (sequencep reviews) (> (length reviews) 0))
     (let ((parts nil))
-      (seq-doseq (r reviews)
+      (dolist (r (forge-review-overlay--sort-reviews
+                  (forge-review-overlay--latest-reviews-per-user reviews)))
         (let* ((login (alist-get 'login (alist-get 'author r)))
                (state (or (alist-get 'state r) ""))
                (icon (forge-review-overlay--format-review-state state)))
@@ -178,7 +202,7 @@ When FORCE is non-nil, bypass cache."
   (let ((decision (forge-review-overlay--format-decision
                    (alist-get 'reviewDecision pr-data)))
         (reviewers (forge-review-overlay--format-reviewers
-                    (alist-get 'latestReviews pr-data))))
+                    (alist-get 'reviews pr-data))))
     (cond
      ((and decision reviewers) (format "%s(%s)" decision reviewers))
      (decision                 decision)
