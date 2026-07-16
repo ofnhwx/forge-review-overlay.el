@@ -17,7 +17,7 @@
 
 ;;;; Options
 
-(defcustom forge-review-overlay-ignored-reviewers '("github-actions" "claude")
+(defcustom forge-review-overlay-ignored-reviewers '("github-actions" "claude" "chatgpt-codex-connector")
   "List of reviewer logins to exclude from overlay display."
   :type '(repeat string)
   :group 'forge)
