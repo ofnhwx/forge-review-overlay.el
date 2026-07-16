@@ -33,8 +33,23 @@
   :group 'forge)
 
 (defface forge-review-overlay-highlight
-  '((t :foreground "medium purple"))
+  '((t :foreground "#ff66d1" :weight bold))
   "Face used for the login in `forge-review-overlay-highlighted-reviewer'."
+  :group 'forge)
+
+(defface forge-review-overlay-ci-success
+  '((t :foreground "#a0c8a0"))
+  "Face used for CI success count."
+  :group 'forge)
+
+(defface forge-review-overlay-ci-warning
+  '((t :foreground "#d4c890"))
+  "Face used for CI pending count."
+  :group 'forge)
+
+(defface forge-review-overlay-ci-error
+  '((t :foreground "#e8b0c8"))
+  "Face used for CI failure count."
   :group 'forge)
 
 ;;;; Cache
@@ -44,7 +59,7 @@
 (defvar forge-review-overlay--cache (make-hash-table :test 'equal))
 
 (defun forge-review-overlay--cache-valid-p (slug pullreqs-until)
-  "Return non-nil if cache for SLUG was fetched at or after PULLREQS-UNTIL and within TTL."
+  "Return non-nil if cache for SLUG is at or after PULLREQS-UNTIL and within TTL."
   (when-let* ((entry (gethash slug forge-review-overlay--cache))
               (fetched (car entry)))
     (and (or (null pullreqs-until)
@@ -128,9 +143,9 @@ When FORCE is non-nil, bypass cache."
           (_ (cl-incf pending))))
       (propertize (format "CI:%d/%d/%d" pass fail pending)
                   'face (cond
-                         ((> fail 0) 'error)
-                         ((> pending 0) 'warning)
-                         (t 'success))))))
+                         ((> fail 0) 'forge-review-overlay-ci-error)
+                         ((> pending 0) 'forge-review-overlay-ci-warning)
+                         (t 'forge-review-overlay-ci-success))))))
 
 (defun forge-review-overlay--format-review-state (state)
   "Format review STATE as an icon string."
